@@ -1,0 +1,6 @@
+{
+  "name": "Gram Suvidha Portal",
+  "description": "सभी ग्रामवासियों के लिए एक ही स्थान पर सभी सरकारी सेवाएँ, कृषि लाभ, परिवहन सेवाएँ और शिकायत पंजीकरण सुविधा।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
