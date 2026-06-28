@@ -7,7 +7,7 @@
 This contains everything you need to run your app locally.
 
 ## Run Locally
-Open http://localhost:3000 in your browser to view the portal.
+Open(https://gram-suvidha-portal.netlify.app/) in your browser to view the portal.
 
 ## Run Locally
 
