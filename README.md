@@ -6,7 +6,8 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/93ed1ee2-3b36-4f3b-8368-044706646416
+## Run Locally
+Open http://localhost:3000 in your browser to view the portal.
 
 ## Run Locally
 
