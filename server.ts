@@ -37,7 +37,7 @@ const otpStorage = new Map<
   }
 >();
 
-// Updated for Real Fast2SMS Delivery via v3 route
+// Updated for Quick Fast2SMS Delivery (Fixes Invalid Sender ID)
 async function sendRealSMS(
   phone: string,
   otp: string
@@ -57,10 +57,10 @@ async function sendRealSMS(
   }
 
   try {
-    // Testing aur fast delivery ke liye 'route=v3' aur parameter 'variables' set kar diya hai
+    // route=q (Quick SMS) testing ke liye bina kisi Sender ID jhanjhat ke turant chalta hai
     const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
       fast2smsKey
-    )}&route=v3&variables=${otp}&numbers=${phone}`;
+    )}&route=q&message=${encodeURIComponent("Rgram Suvidha Portal OTP: " + otp)}&flash=0&numbers=${phone}`;
 
     const response = await fetch(url);
     const data = await response.json();
@@ -120,7 +120,6 @@ app.post("/api/otp/send", async (req, res) => {
       success: true,
       message: "ओटीपी सफलतापूर्वक भेज दिया गया है।",
       sentViaSMS: sms.success,
-      // debugOtp ko yahan se block kar diya hai taaki screen par leakage na ho
     });
   } catch (err) {
     return res.status(500).json({
