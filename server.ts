@@ -37,7 +37,7 @@ const otpStorage = new Map<
   }
 >();
 
-// Updated for Real Fast2SMS Delivery
+// Updated for Real Fast2SMS Delivery via v3 route
 async function sendRealSMS(
   phone: string,
   otp: string
@@ -57,10 +57,10 @@ async function sendRealSMS(
   }
 
   try {
-    // Fast2SMS standard API routes ke liye parameter 'variables' aur route 'dlt' ya 'v3' use hota hai
+    // Testing aur fast delivery ke liye 'route=v3' aur parameter 'variables' set kar diya hai
     const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
       fast2smsKey
-    )}&route=dlt&variables=${otp}&numbers=${phone}`;
+    )}&route=v3&variables=${otp}&numbers=${phone}`;
 
     const response = await fetch(url);
     const data = await response.json();
