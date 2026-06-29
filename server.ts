@@ -37,6 +37,7 @@ const otpStorage = new Map<
   }
 >();
 
+// Updated for Real Fast2SMS Delivery
 async function sendRealSMS(
   phone: string,
   otp: string
@@ -56,9 +57,10 @@ async function sendRealSMS(
   }
 
   try {
+    // Fast2SMS standard API routes ke liye parameter 'variables' aur route 'dlt' ya 'v3' use hota hai
     const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
       fast2smsKey
-    )}&route=otp&variables_values=${otp}&numbers=${phone}`;
+    )}&route=dlt&variables=${otp}&numbers=${phone}`;
 
     const response = await fetch(url);
     const data = await response.json();
@@ -73,7 +75,7 @@ async function sendRealSMS(
     return {
       success: false,
       provider: "Fast2SMS",
-      error: data.message,
+      error: data.message || "SMS Delivery Failed",
     };
   } catch (err: any) {
     return {
@@ -84,7 +86,7 @@ async function sendRealSMS(
   }
 }
 
-// Send OTP
+// Send OTP Route (Fixed debugOtp exposure)
 app.post("/api/otp/send", async (req, res) => {
   try {
     const { phone } = req.body;
@@ -105,14 +107,20 @@ app.post("/api/otp/send", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    console.log("OTP :", otp);
+    // Local Testing backend logs ke liye rahega, frontend screen par nahi jayega
+    console.log(`[DEV ONLY] OTP for ${phone} is: ${otp}`);
 
     const sms = await sendRealSMS(phone, otp);
 
+    if (!sms.success) {
+      console.error("SMS Gateway Error:", sms.error);
+    }
+
     return res.json({
       success: true,
-      debugOtp: otp,
+      message: "ओटीपी सफलतापूर्वक भेज दिया गया है।",
       sentViaSMS: sms.success,
+      // debugOtp ko yahan se block kar diya hai taaki screen par leakage na ho
     });
   } catch (err) {
     return res.status(500).json({
@@ -121,6 +129,7 @@ app.post("/api/otp/send", async (req, res) => {
     });
   }
 });
+
 // Verify OTP
 app.post("/api/otp/verify", async (req, res) => {
   try {
@@ -181,7 +190,7 @@ app.post("/api/otp/verify", async (req, res) => {
       if (!existing) {
         return res.status(404).json({
           success: false,
-          message: "यह मोबाइल नंबर रजिस्टर नहीं है।",
+          message: "यह mobile number register नहीं है।",
         });
       }
 
@@ -250,6 +259,7 @@ app.post("/api/otp/verify", async (req, res) => {
 
   }
 });
+
 // ======================================
 // Setup Vite Development Middleware
 // ======================================
