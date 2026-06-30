@@ -9,7 +9,6 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import User from "./models/User";
-import twilio from "twilio"; // Twilio package import kiya hai
 
 dotenv.config();
 
@@ -38,68 +37,7 @@ const otpStorage = new Map<
   }
 >();
 
-// Fast2SMS ya Twilio dono mein se jo config milega usse bhejega
-async function sendRealSMS(
-  phone: string,
-  otp: string
-): Promise<{
-  success: boolean;
-  provider: string;
-  error?: string;
-}> {
-  const fast2smsKey = process.env.FAST2SMS_API_KEY;
-  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-
-  // 1. Agar Fast2SMS Key hai toh pehle usse koshish karega (Updated clean route)
-  if (fast2smsKey) {
-    try {
-      const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
-        fast2smsKey
-      )}&route=otp&variables_values=${otp}&numbers=${phone}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.return === true) {
-        return { success: true, provider: "Fast2SMS" };
-      }
-    } catch (e) {
-      console.log("Fast2SMS Failed, switching/checking fallback...");
-    }
-  }
-
-  // 2. Fallback to Twilio (Agar Fast2SMS error de raha hai)
-  if (twilioSid && twilioAuthToken && twilioPhone) {
-    try {
-      const client = twilio(twilioSid, twilioAuthToken);
-      
-      // India ke numbers ke liye +91 zaroori hai agar user ne nahi lagaya
-      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-
-      await client.messages.create({
-        body: `Rgram Suvidha Portal OTP: ${otp}. Valid for 5 minutes.`,
-        from: twilioPhone,
-        to: formattedPhone,
-      });
-
-      return { success: true, provider: "Twilio" };
-    } catch (err: any) {
-      return {
-        success: false,
-        provider: "Twilio/Fast2SMS",
-        error: err.message,
-      };
-    }
-  }
-
-  // 3. Agar kuch bhi nahi chal raha toh local console backup (Bina error ke proceed karega)
-  console.log(`[BACKUP DEV MODE] OTP for ${phone} is: ${otp}`);
-  return { success: true, provider: "Console-Backup" };
-}
-
-// Send OTP Route
+// Send OTP Route (Bypass Mode for 100% Uptime)
 app.post("/api/otp/send", async (req, res) => {
   try {
     const { phone } = req.body;
@@ -111,22 +49,20 @@ app.post("/api/otp/send", async (req, res) => {
       });
     }
 
-    const otp = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
+    // Testing ke liye solid static OTP set kar diya hai
+    const otp = "123456";
 
     otpStorage.set(phone, {
       otp,
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 min validity
     });
 
-    const sms = await sendRealSMS(phone, otp);
+    console.log(`[TEST MODE] OTP for ${phone} is: ${otp}`);
 
     return res.json({
       success: true,
-      message: "ओटीपी सफलतापूर्वक भेज दिया गया है।",
-      sentViaSMS: sms.success,
-      provider: sms.provider
+      message: "ओटीपी सफलतापूर्वक भेज दिया गया है (Testing Mode: Use 123456)",
+      sentViaSMS: false,
     });
   } catch (err) {
     return res.status(500).json({
@@ -183,6 +119,7 @@ app.post("/api/otp/verify", async (req, res) => {
     otpStorage.delete(phone);
     let citizenData;
 
+    // LOGIN
     if (isLoginMode) {
       const existing = await User.findOne({ phone });
       if (!existing) {
@@ -200,6 +137,7 @@ app.post("/api/otp/verify", async (req, res) => {
         isLoggedIn: true,
       };
     } else {
+      // REGISTER
       const alreadyExists = await User.findOne({ phone });
       if (alreadyExists) {
         return res.status(400).json({
