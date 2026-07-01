@@ -37,7 +37,7 @@ const otpStorage = new Map<
   }
 >();
 
-// Dynamic Delivery via Fast2SMS (Har baar naya OTP bhejega)
+// Fast2SMS Delivery Function
 async function sendRealSMS(
   phone: string,
   otp: string
@@ -57,7 +57,6 @@ async function sendRealSMS(
   }
 
   try {
-    // Fast2SMS Official OTP Route - Har baar dynamic variables_values pass hogi
     const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
       fast2smsKey
     )}&route=otp&variables_values=${otp}&numbers=${phone}`;
@@ -86,7 +85,7 @@ async function sendRealSMS(
   }
 }
 
-// Send OTP Route (HAR BAAR NEW DYNAMIC OTP)
+// Send OTP Route (CRITICAL FIX: OTP Web Response mein include kar diya hai testing ke liye)
 app.post("/api/otp/send", async (req, res) => {
   try {
     const { phone } = req.body;
@@ -98,32 +97,27 @@ app.post("/api/otp/send", async (req, res) => {
       });
     }
 
-    // Yahan har baar 6-digit ka naya random number generate hoga (Fix 123456 hata diya hai)
+    // Har baar unique naya random OTP banega
     const otp = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
 
-    // Store in memory with 5 mins expiry
     otpStorage.set(phone, {
       otp,
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    // Render ke Terminal Logs mein hamesha real-time naya OTP dikhega
     console.log(`[DYNAMIC MODE] Naya OTP for ${phone} is: ${otp}`);
 
-    // Real SMS bhejbe ki koshish
+    // SMS bhejne ki koshish karega background mein
     const sms = await sendRealSMS(phone, otp);
 
-    if (!sms.success) {
-      console.error("SMS Gateway Logs:", sms.error);
-    }
-
+    // TESTING BYPASS: Response mein 'developmentOtp' bhej rahe hain taaki agar SMS na aaye toh web par use kar sakein
     return res.json({
       success: true,
-      message: "ओटीपी सफलतापूर्वक जनरेट कर दिया गया है।",
+      message: `ओटीपी जनरेट हो गया है! (Testing OTP: ${otp})`, 
       sentViaSMS: sms.success,
-      // Debug log backend mein chalega frontend par leakage nahi hogi
+      developmentOtp: otp // Ye aapke frontend par data ko de dega
     });
   } catch (err) {
     return res.status(500).json({
@@ -180,7 +174,6 @@ app.post("/api/otp/verify", async (req, res) => {
     otpStorage.delete(phone);
     let citizenData;
 
-    // LOGIN
     if (isLoginMode) {
       const existing = await User.findOne({ phone });
       if (!existing) {
@@ -198,7 +191,6 @@ app.post("/api/otp/verify", async (req, res) => {
         isLoggedIn: true,
       };
     } else {
-      // REGISTER
       const alreadyExists = await User.findOne({ phone });
       if (alreadyExists) {
         return res.status(400).json({
@@ -267,7 +259,7 @@ connectDB()
     await setupVite();
     app.listen(PORT, "0.0.0.0", () => {
       console.log("======================================");
-      console.log(`🚀 Server Running with Dynamic OTP`);
+      console.log(`🚀 Server Running with Web Visible Dynamic OTP`);
       console.log("======================================");
     });
   })
