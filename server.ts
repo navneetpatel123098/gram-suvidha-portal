@@ -37,7 +37,56 @@ const otpStorage = new Map<
   }
 >();
 
-// Send OTP Route (Bypass Mode for 100% Uptime)
+// Dynamic Delivery via Fast2SMS (Har baar naya OTP bhejega)
+async function sendRealSMS(
+  phone: string,
+  otp: string
+): Promise<{
+  success: boolean;
+  provider: string;
+  error?: string;
+}> {
+  const fast2smsKey = process.env.FAST2SMS_API_KEY;
+
+  if (!fast2smsKey) {
+    return {
+      success: false,
+      provider: "none",
+      error: "No SMS Gateway Configured",
+    };
+  }
+
+  try {
+    // Fast2SMS Official OTP Route - Har baar dynamic variables_values pass hogi
+    const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
+      fast2smsKey
+    )}&route=otp&variables_values=${otp}&numbers=${phone}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.return === true) {
+      return {
+        success: true,
+        provider: "Fast2SMS",
+      };
+    }
+
+    return {
+      success: false,
+      provider: "Fast2SMS",
+      error: data.message || "SMS Delivery Failed",
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      provider: "Fast2SMS",
+      error: err.message,
+    };
+  }
+}
+
+// Send OTP Route (HAR BAAR NEW DYNAMIC OTP)
 app.post("/api/otp/send", async (req, res) => {
   try {
     const { phone } = req.body;
@@ -49,20 +98,32 @@ app.post("/api/otp/send", async (req, res) => {
       });
     }
 
-    // Testing ke liye solid static OTP set kar diya hai
-    const otp = "123456";
+    // Yahan har baar 6-digit ka naya random number generate hoga (Fix 123456 hata diya hai)
+    const otp = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
 
+    // Store in memory with 5 mins expiry
     otpStorage.set(phone, {
       otp,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 min validity
+      expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    console.log(`[TEST MODE] OTP for ${phone} is: ${otp}`);
+    // Render ke Terminal Logs mein hamesha real-time naya OTP dikhega
+    console.log(`[DYNAMIC MODE] Naya OTP for ${phone} is: ${otp}`);
+
+    // Real SMS bhejbe ki koshish
+    const sms = await sendRealSMS(phone, otp);
+
+    if (!sms.success) {
+      console.error("SMS Gateway Logs:", sms.error);
+    }
 
     return res.json({
       success: true,
-      message: "ओटीपी सफलतापूर्वक भेज दिया गया है (Testing Mode: Use 123456)",
-      sentViaSMS: false,
+      message: "ओटीपी सफलतापूर्वक जनरेट कर दिया गया है।",
+      sentViaSMS: sms.success,
+      // Debug log backend mein chalega frontend par leakage nahi hogi
     });
   } catch (err) {
     return res.status(500).json({
@@ -206,8 +267,7 @@ connectDB()
     await setupVite();
     app.listen(PORT, "0.0.0.0", () => {
       console.log("======================================");
-      console.log(`🚀 Server Running`);
-      console.log(`🌐 http://localhost:${PORT}`);
+      console.log(`🚀 Server Running with Dynamic OTP`);
       console.log("======================================");
     });
   })
